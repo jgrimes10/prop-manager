@@ -10,21 +10,18 @@ export const Route = createFileRoute("/properties/$propertyId")({
 	loader: async ({ params }) => {
 		const propertyId = params.propertyId;
 
-		const [property, units] = await Promise.all([
+		const [property, unitsResult] = await Promise.all([
 			getProperty({ data: propertyId }),
 			listUnitsForProperty({ data: propertyId }),
 		]);
 
-		return { property, units };
+		return { property, units: unitsResult.items };
 	},
 	component: RouteComponent,
 });
 
 function RouteComponent() {
-	const { property, units } = Route.useLoaderData() as {
-		property: Awaited<ReturnType<typeof getProperty>>;
-		units: Awaited<ReturnType<typeof listUnitsForProperty>>;
-	};
+	const { property, units } = Route.useLoaderData();
 
 	return (
 		<main className="p-6 space-y-4">
@@ -94,7 +91,7 @@ function RouteComponent() {
 
 type UnitsSectionProps = {
 	propertyId: string;
-	units: Awaited<ReturnType<typeof listUnitsForProperty>>;
+	units: Awaited<ReturnType<typeof listUnitsForProperty>>["items"];
 };
 
 function UnitsSection({ propertyId, units }: UnitsSectionProps) {

@@ -15,10 +15,7 @@ export const Route = createFileRoute("/properties/")({
 });
 
 function PropertiesPage() {
-	const { properties = [] } =
-		(Route.useLoaderData() as
-			| Awaited<ReturnType<typeof listProperties>>
-			| undefined) ?? {};
+	const { items: properties = [] } = Route.useLoaderData();
 	const [isAddOpen, setIsAddOpen] = useState(false);
 
 	return (
