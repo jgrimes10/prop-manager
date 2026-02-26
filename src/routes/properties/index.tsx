@@ -3,9 +3,11 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Modal } from "@/components/ui/modal";
+import { StatusPill, type StatusVariant } from "@/components/ui/status-pill";
 import {
 	type CreatePropertyInput,
 	createPropertySchema,
+	type Property,
 } from "@/domain/property";
 import { createPropertyFn, listProperties } from "@/server/property.functions";
 
@@ -13,6 +15,15 @@ export const Route = createFileRoute("/properties/")({
 	loader: () => listProperties(),
 	component: PropertiesPage,
 });
+
+const PROPERTY_STATUS_MAP: Record<
+	Property["status"],
+	{ label: string; variant: StatusVariant }
+> = {
+	active: { label: "Active", variant: "success" },
+	inactive: { label: "Inactive", variant: "neutral" },
+	draft: { label: "Draft", variant: "warning" },
+};
 
 function PropertiesPage() {
 	const { items: properties = [] } = Route.useLoaderData();
@@ -50,34 +61,38 @@ function PropertiesPage() {
 						</tr>
 					</thead>
 					<tbody>
-						{properties.map((property) => (
-							<tr key={property.id} className="border-t last:border-b">
-								<td className="px-4 py-2 font-medium">
-									{/* Detail route will exist soon; for now it's a stub link */}
-									<Link
-										to="/properties/$propertyId"
-										params={{ propertyId: property.id }}
-										className="text-blue-600 hover:underline"
-									>
-										{property.name}
-									</Link>
-								</td>
-								<td className="px-4 py-2">
-									{property.addressLine1}
-									{property.addressLine2 ? `, ${property.addressLine2}` : ""}
-								</td>
-								<td className="px-4 py-2">
-									{property.city}, {property.state} {property.zipCode}
-								</td>
-								<td className="px-4 py-2">
-									<StatusPill status={property.status} />
-								</td>
-								<td className="px-4 py-2 text-right text-xs text-gray-500">
-									{/* Placeholder for quick actions */}
-									View - Edit - Units
-								</td>
-							</tr>
-						))}
+						{properties.map((property) => {
+							const config = PROPERTY_STATUS_MAP[property.status];
+
+							return (
+								<tr key={property.id} className="border-t last:border-b">
+									<td className="px-4 py-2 font-medium">
+										{/* Detail route will exist soon; for now it's a stub link */}
+										<Link
+											to="/properties/$propertyId"
+											params={{ propertyId: property.id }}
+											className="text-blue-600 hover:underline"
+										>
+											{property.name}
+										</Link>
+									</td>
+									<td className="px-4 py-2">
+										{property.addressLine1}
+										{property.addressLine2 ? `, ${property.addressLine2}` : ""}
+									</td>
+									<td className="px-4 py-2">
+										{property.city}, {property.state} {property.zipCode}
+									</td>
+									<td className="px-4 py-2">
+										<StatusPill label={config.label} variant={config.variant} />
+									</td>
+									<td className="px-4 py-2 text-right text-xs text-gray-500">
+										{/* Placeholder for quick actions */}
+										View - Edit - Units
+									</td>
+								</tr>
+							);
+						})}
 					</tbody>
 				</table>
 			</section>
@@ -87,34 +102,6 @@ function PropertiesPage() {
 				onClose={() => setIsAddOpen(false)}
 			/>
 		</main>
-	);
-}
-
-interface StatusPillProps {
-	status: "active" | "inactive" | "draft";
-}
-
-function StatusPill({ status }: StatusPillProps) {
-	const label =
-		status === "active"
-			? "Active"
-			: status === "inactive"
-				? "Inactive"
-				: "Draft";
-
-	const colorClasses =
-		status === "active"
-			? "bg-green-100 text-green-700"
-			: status === "inactive"
-				? "bg-gray-100 text-gray-600"
-				: "bg-yellow-100 text-yellow-700";
-
-	return (
-		<span
-			className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colorClasses}`}
-		>
-			{label}
-		</span>
 	);
 }
 
