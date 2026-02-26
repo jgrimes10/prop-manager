@@ -1,14 +1,14 @@
-export type UnitStatus = 'vacant' | 'occupied' | 'notice' | 'maintenance';
+import { createInsertSchema } from "drizzle-zod";
+import type { z } from "zod";
+import { units } from "@/db/schema";
 
-export interface Unit {
-    id: string;
-    propertyId: string;
-    unitNumber: string;
-    bedrooms: number;
-    bathrooms: number;
-    squareFeet?: number;
-    rent: number;
-    status: UnitStatus;
-    createdAt: string;
-    updatedAt: string;
-}
+export const createUnitSchema = createInsertSchema(units).omit({
+	id: true,
+	createdAt: true,
+	updatedAt: true,
+});
+
+export type CreateUnitInput = z.infer<typeof createUnitSchema>;
+
+export type Unit = typeof units.$inferSelect;
+export type NewDbUnit = typeof units.$inferInsert;

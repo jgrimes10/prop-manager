@@ -1,49 +1,76 @@
-import type { Property } from "@/domain/property";
+import { randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { properties } from "@/db/schema";
+import type {
+	CreatePropertyInput,
+	NewDbProperty,
+	Property,
+} from "@/domain/property";
 
-const properties: Property[] = [
-    {
-        id: 'prop-001',
-        name: 'Downtown Office Complex',
-        addressLine1: '123 Main Street',
-        city: 'New York',
-        state: 'NY',
-        zipCode: '10001',
-        country: 'USA',
-        status: 'active',
-        createdAt: '2024-01-15T10:30:00Z',
-        updatedAt: '2024-01-15T10:30:00Z',
-    },
-    {
-        id: 'prop-002',
-        name: 'Suburban Retail Center',
-        addressLine1: '456 Oak Avenue',
-        addressLine2: 'Suite 200',
-        city: 'Los Angeles',
-        state: 'CA',
-        zipCode: '90001',
-        country: 'USA',
-        status: 'active',
-        createdAt: '2024-01-10T14:45:00Z',
-        updatedAt: '2024-01-10T14:45:00Z',
-    },
-    {
-        id: 'prop-003',
-        name: 'Industrial Warehouse',
-        addressLine1: '789 Industrial Boulevard',
-        city: 'Chicago',
-        state: 'IL',
-        zipCode: '60601',
-        country: 'USA',
-        status: 'draft',
-        createdAt: '2024-01-20T09:15:00Z',
-        updatedAt: '2024-01-20T09:15:00Z',
-    },
-]
-
-export function getAllProperties(): Property[] {
-    return properties
+/**
+ * Fetch all properties.
+ * @returns {Promise<Property[]>} An array of all property objects.
+ */
+export async function getAllProperties(): Promise<Property[]> {
+	return await db.select().from(properties).orderBy(properties.createdAt);
 }
 
-export function getPropertyById(id: string): Property | undefined {
-    return properties.find(p => p.id === id);
+/**
+ * Fetch a property by its ID.
+ * @param {string} id - The unique identifier of the property to retrieve.
+ * @returns {Property | undefined} The property object if found, otherwise undefined.
+ */
+export async function getPropertyById(
+	id: string,
+): Promise<Property | undefined> {
+	const [row] = await db
+		.select()
+		.from(properties)
+		.where(eq(properties.id, id))
+		.limit(1);
+
+	return row;
+}
+
+function isDuplicatePropertyError(error: unknown): boolean {
+	return (
+		error instanceof Error &&
+		error.message.includes("UNIQUE constraint failed:") &&
+		error.message.includes("properties_name_address_city_unique")
+	);
+}
+
+/**
+ * Create a new property based on the provided input. This function generates a unique ID for the property, sets the creation and update timestamps, and adds the new property to the in-memory list of properties.
+ * @param {CreatePropertyInput} input - The input data for creating a new property.
+ * @returns {Promise<Property>} The newly created property object.
+ */
+export async function createProperty(
+	input: CreatePropertyInput,
+): Promise<Property> {
+	const newRow: NewDbProperty = {
+		id: randomUUID(),
+		name: input.name.trim(),
+		addressLine1: input.addressLine1.trim(),
+		addressLine2: input.addressLine2?.trim() || null,
+		city: input.city.trim(),
+		state: input.state.trim(),
+		zipCode: input.zipCode.trim(),
+		country: input.country.trim(),
+		status: input.status,
+	};
+
+	try {
+		const [inserted] = await db.insert(properties).values(newRow).returning();
+		return inserted;
+	} catch (error) {
+		if (isDuplicatePropertyError(error)) {
+			throw new Error(
+				`A property named "${input.name.trim()}" at "${input.addressLine1.trim()}, ${input.city.trim()}" already exists.`,
+			);
+		}
+
+		throw error;
+	}
 }
